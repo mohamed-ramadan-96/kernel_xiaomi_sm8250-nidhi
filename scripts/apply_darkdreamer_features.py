@@ -346,7 +346,7 @@ def main() -> None:
         fail(f"Selected source is not a Nidhi build.sh-compatible kernel tree: {source}")
 
     select_battery_profile(source, args.battery_profile, args.device)
-    if args.device == "alioth":
+    if args.device == "alioth" and args.battery_profile == "j3s":
         apply_j3s_profile_driver_override(source)
     if args.bypass_charging == "true":
         add_bypass_charging(source)
