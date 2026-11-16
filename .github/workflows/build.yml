@@ -6,17 +6,13 @@ on:
   workflow_dispatch:
     inputs:
       source_url:
-        description: "Kernel source GitHub URL (blank = this repository)"
+        description: "Kernel source GitHub URL"
         type: string
-        default: ""
+        default: "https://github.com/kaixenberg/kernel_xiaomi_sm8250"
       source_ref:
-        description: "Kernel source branch or tag (blank = workflow branch)"
+        description: "Kernel source branch or tag"
         type: string
-        default: ""
-      source_commit:
-        description: "Optional exact source commit SHA (overrides source ref)"
-        type: string
-        default: ""
+        default: "nidhi"
       device:
         description: "Device (only alioth is officially supported)"
         type: choice
@@ -111,7 +107,6 @@ jobs:
       KERNEL_NAME: ${{ inputs.kernel_name }}
       SOURCE_URL_INPUT: ${{ inputs.source_url }}
       SOURCE_REF_INPUT: ${{ inputs.source_ref }}
-      SOURCE_COMMIT_INPUT: ${{ inputs.source_commit }}
     steps:
       - name: Check out workflow tooling
         uses: actions/checkout@v4
@@ -125,8 +120,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          source_url="${SOURCE_URL_INPUT:-https://github.com/$GITHUB_REPOSITORY.git}"
-          source_ref="${SOURCE_REF_INPUT:-$GITHUB_REF_NAME}"
+          source_url="${SOURCE_URL_INPUT:-https://github.com/kaixenberg/kernel_xiaomi_sm8250}"
+          source_ref="${SOURCE_REF_INPUT:-nidhi}"
 
           # Accept GitHub HTTPS repository URLs only; the source is built as code.
           if [[ ! "$source_url" =~ ^https://github\.com/[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+(\.git)?/?$ ]]; then
@@ -137,17 +132,7 @@ jobs:
             echo "::error::Source branch/tag is empty or invalid."
             exit 1
           fi
-          if [[ -n "$SOURCE_COMMIT_INPUT" && ! "$SOURCE_COMMIT_INPUT" =~ ^[0-9a-fA-F]{7,40}$ ]]; then
-            echo "::error::Source commit must be a 7-40 character hexadecimal SHA."
-            exit 1
-          fi
-
           git clone --recurse-submodules --depth 1 --branch "$source_ref" "$source_url" kernel-source
-          if [[ -n "$SOURCE_COMMIT_INPUT" ]]; then
-            git -C kernel-source fetch --depth 1 origin "$SOURCE_COMMIT_INPUT"
-            git -C kernel-source checkout --detach FETCH_HEAD
-            git -C kernel-source submodule update --init --recursive
-          fi
 
           source_sha=$(git -C kernel-source rev-parse HEAD)
           source_slug=$(printf '%s' "$source_url" | sed -E 's#^https://github.com/##; s#\.git/?$##; s#/$##')
