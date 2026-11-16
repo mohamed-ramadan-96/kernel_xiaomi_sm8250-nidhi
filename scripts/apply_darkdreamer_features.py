@@ -242,7 +242,7 @@ def add_bypass_charging(source: Path) -> None:
             "chg->pps_thermal_level = 0",
             "chg->system_temp_level = 0",
         ]
-        missing = [marker for marker in required if marker not in lib and marker != "BYPASS_VOTER"]
+        missing = [marker for marker in required if marker not in lib]
         if missing:
             fail("BYPASS_CHARGING is only partially present in smb5-lib.c: " + ", ".join(missing))
 
