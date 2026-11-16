@@ -287,6 +287,51 @@ def select_battery_profile(source: Path, profile: str, device: str) -> None:
     write(dts_path, dts)
     print(f"Battery profile: {profile} ({'5000mAh j3s' if profile == 'j3s' else '4520mAh stock'})")
 
+
+def apply_j3s_profile_driver_override(source: Path) -> None:
+    """Make the explicit J3S workflow choice authoritative when DS28E16 Page 0 is unreadable."""
+    driver_path = source / "drivers/power/supply/qcom/qpnp-fg-gen4.c"
+    driver = read(driver_path)
+    dts = read(source / "arch/arm64/boot/dts/vendor/qcom/alioth-sm8250.dtsi")
+
+    if "fg-gen4-batterydata-apollo-sun-5000mah.dtsi" not in dts:
+        fail("Battery profile: J3S driver override requires the 5000mAh J3S battery-data include.")
+
+    marker = 'pr_alert("DTBO Flag found: Forcing j3ssun_5000mah profile\\n");'
+    if marker in driver:
+        required = [
+            "fg->profile_already_find = true;",
+            "retry_batt_profile = BATT_PROFILE_RETRY_COUNT_MAX;",
+            '"j3ssun_5000mah"',
+        ]
+        missing = [item for item in required if item not in driver]
+        if missing:
+            fail("Battery profile: existing J3S override is incomplete: " + ", ".join(missing))
+        print("Battery profile driver: existing explicit J3S override verified")
+        return
+
+    anchor = "\t\tprofile_node = ERR_PTR(-ENXIO);\n"
+    block = (
+        "\t\t/* The workflow's explicit J3S selection must not depend on DS28E16 Page 0. */\n"
+        "\t\tif (chip->dt.j3s_batt_profile && !fg->profile_already_find) {\n"
+        "\t\t\tpr_alert(\"DTBO Flag found: Forcing j3ssun_5000mah profile\\n\");\n"
+        "\t\t\tfg->profile_already_find = true;\n"
+        "\t\t\t/* Stop the verify retry path after an explicit profile selection. */\n"
+        "\t\t\tretry_batt_profile = BATT_PROFILE_RETRY_COUNT_MAX;\n"
+        "\t\t\tprofile_node = of_batterydata_get_best_profile(batt_node,\n"
+        "\t\t\t\tfg->batt_id_ohms / 1000, \"j3ssun_5000mah\");\n"
+        "\t\t}\n"
+    )
+
+    if driver.count(anchor) != 1:
+        fail("Battery profile: could not uniquely locate the DS28E16 profile-selection entry point; refusing an unsafe driver edit.")
+    if "BATT_PROFILE_RETRY_COUNT_MAX" not in driver or "fg->profile_already_find" not in driver:
+        fail("Battery profile: selected kernel driver lacks the expected DS28E16 retry/profile state.")
+
+    driver = driver.replace(anchor, anchor + block, 1)
+    write(driver_path, driver)
+    print("Battery profile driver: explicit J3S override applied (independent of DS28E16 Page 0)")
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source-dir", required=True, type=Path)
@@ -301,6 +346,8 @@ def main() -> None:
         fail(f"Selected source is not a Nidhi build.sh-compatible kernel tree: {source}")
 
     select_battery_profile(source, args.battery_profile, args.device)
+    if args.device == "alioth":
+        apply_j3s_profile_driver_override(source)
     if args.bypass_charging == "true":
         add_bypass_charging(source)
     else:
