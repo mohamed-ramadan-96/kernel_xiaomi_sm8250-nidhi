@@ -18,6 +18,19 @@ on:
         type: choice
         options: [alioth, apollo, pipa]
         default: alioth
+      battery_profile:
+        description: "Alioth battery profile (j3s=5000mAh, stk=4520mAh)"
+        type: choice
+        options: [j3s, stk]
+        default: j3s
+      bypass_charging:
+        description: "Backport and enable QPNP-SMB5 bypass charging"
+        type: boolean
+        default: false
+      rw_swappiness:
+        description: "Allow privileged users to modify vm.swappiness"
+        type: boolean
+        default: false
       kernel_name:
         description: "Kernel name in uname (4.19.325-<name>-<hash>)"
         type: string
@@ -147,6 +160,17 @@ jobs:
         with:
           cache-key: ${{ inputs.device }}-${{ steps.source.outputs.slug }}
           source-dir: kernel-source
+
+      - name: Apply Darkdreamer feature options to selected kernel source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 workflow-tools/scripts/apply_darkdreamer_features.py \\
+            --source-dir kernel-source \\
+            --device "${DEVICE}" \\
+            --battery-profile "${{ inputs.battery_profile }}" \\
+            --bypass-charging "${{ inputs.bypass_charging }}" \\
+            --rw-swappiness "${{ inputs.rw_swappiness }}"
 
       - name: Pick the switches to turn off
         env:
