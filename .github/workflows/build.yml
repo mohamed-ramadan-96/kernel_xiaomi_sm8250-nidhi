@@ -165,7 +165,7 @@ jobs:
             --source-dir kernel-source \
             --device "${DEVICE}" \
             --battery-profile "${{ inputs.battery_profile }}" \
-            --bypass-charging "${{ inputs.bypass_charging }}" \
+            --bypass-charging "${{ inputs.bypass_charging }}"
 
       - name: Pick the switches to turn off
         env:
