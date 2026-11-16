@@ -113,6 +113,13 @@ jobs:
       SOURCE_REF_INPUT: ${{ inputs.source_ref }}
       SOURCE_COMMIT_INPUT: ${{ inputs.source_commit }}
     steps:
+      - name: Check out workflow tooling
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          path: workflow-tools
+          fetch-depth: 1
+
       - name: Check out the selected kernel source
         id: source
         shell: bash
@@ -151,7 +158,7 @@ jobs:
           echo "Selected source: $source_url ($source_ref, $source_sha)"
 
       - name: Set up the build
-        uses: ./.github/actions/setup-build
+        uses: ./workflow-tools/.github/actions/setup-build
         with:
           cache-key: ${{ inputs.device }}-${{ steps.source.outputs.slug }}-${{ steps.source.outputs.sha }}
           source-dir: kernel-source
