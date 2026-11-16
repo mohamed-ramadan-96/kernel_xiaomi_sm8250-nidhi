@@ -166,6 +166,7 @@ def add_bypass_charging(source: Path) -> None:
         lib = function_body_replace(lib, "smblib_get_prop_input_suspend", getter_body)
 
         setter_body = '''
+	int rc;
 #ifdef CONFIG_BYPASS_CHARGING
 \t/* Keep the input path active while the charger IC bypasses battery charging. */
 \trc = vote(chg->usb_icl_votable, USER_VOTER, false, 0);
