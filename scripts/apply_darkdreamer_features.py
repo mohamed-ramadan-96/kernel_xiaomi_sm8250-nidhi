@@ -46,7 +46,7 @@ def ensure_before(text: str, anchor: str, block: str, label: str) -> str:
 def set_config(path: Path, symbol: str, enabled: bool) -> None:
     content = read(path)
     content = re.sub(
-        rf"(?m)^\s*(?:#\s*)?CONFIG_{re.escape(symbol)}(?:=.*)?\r?\n",
+        rf"(?m)^[ \t]*(?:#\s*)?CONFIG_{re.escape(symbol)}(?:=.*)?\r?\n",
         "",
         content,
     )
