@@ -27,10 +27,6 @@ on:
         description: "Backport and enable QPNP-SMB5 bypass charging"
         type: boolean
         default: false
-      rw_swappiness:
-        description: "Allow privileged users to modify vm.swappiness"
-        type: boolean
-        default: false
       kernel_name:
         description: "Kernel name in uname (4.19.325-<name>-<hash>)"
         type: string
@@ -170,7 +166,6 @@ jobs:
             --device "${DEVICE}" \
             --battery-profile "${{ inputs.battery_profile }}" \
             --bypass-charging "${{ inputs.bypass_charging }}" \
-            --rw-swappiness "${{ inputs.rw_swappiness }}"
 
       - name: Pick the switches to turn off
         env:
