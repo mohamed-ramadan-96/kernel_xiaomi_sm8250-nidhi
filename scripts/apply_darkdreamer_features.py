@@ -300,7 +300,11 @@ def main() -> None:
     if args.bypass_charging == "true":
         add_bypass_charging(source)
     else:
-        print("BYPASS_CHARGING: disabled (no source backport requested)")
+        kconfig = read(source / "drivers/power/supply/Kconfig")
+        if re.search(r"(?m)^config BYPASS_CHARGING\\s*$", kconfig):
+            set_config(source / "arch/arm64/configs/vendor/xiaomi/magictime-common.config",
+                       "BYPASS_CHARGING", False)
+        print("BYPASS_CHARGING: disabled")
 
     add_rw_swappiness(source, args.rw_swappiness)
 
