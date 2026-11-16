@@ -7,11 +7,16 @@ inputs:
   cache-key:
     description: ccache key prefix, e.g. alioth-nidhi
     required: true
+  source-dir:
+    description: Checked-out kernel source directory
+    required: false
+    default: .
 runs:
   using: composite
   steps:
     - name: Fetch KernelSU history
       shell: bash
+      working-directory: ${{ inputs.source-dir }}
       run: git -C KernelSU fetch --unshallow --tags || git -C KernelSU fetch --tags
 
     - name: Install build dependencies
