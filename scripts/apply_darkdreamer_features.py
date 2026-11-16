@@ -54,48 +54,6 @@ def set_config(path: Path, symbol: str, enabled: bool) -> None:
     write(path, content.rstrip() + "\n" + state + "\n")
 
 
-def add_rw_swappiness(source: Path, enabled: bool) -> None:
-    kconfig_path = source / "mm/Kconfig"
-    kconfig = read(kconfig_path)
-    if not re.search(r"(?m)^config RW_SWAPPINESS\s*$", kconfig):
-        block = (
-            'config RW_SWAPPINESS\n'
-            '\tbool "Allow users to modify vm.swappiness at runtime"\n'
-            '\tdepends on SWAP\n'
-            '\tdefault n\n'
-            '\thelp\n'
-            '\t  Make vm.swappiness writable (0644) for privileged users.\n'
-            '\t  When disabled, keep the sysctl read-only (0444).\n\n'
-        )
-        kconfig = ensure_before(kconfig, "config CMA\n", block, "RW_SWAPPINESS Kconfig")
-        write(kconfig_path, kconfig)
-
-    sysctl_path = source / "kernel/sysctl.c"
-    sysctl = read(sysctl_path)
-    match = re.search(
-        r'(?P<head>\t\{\n\t\t\.procname\s*=\s*"swappiness",[\s\S]*?'
-        r'\.maxlen\s*=\s*sizeof\(vm_swappiness\),\n)'
-        r'(?P<mode>\s*\.mode\s*=\s*(?:0644|0444),)',
-        sysctl,
-    )
-    if match:
-        mode = (
-            '#ifdef CONFIG_RW_SWAPPINESS\n'
-            '\t\t.mode\t\t= 0644,\n'
-            '#else\n'
-            '\t\t.mode\t\t= 0444,\n'
-            '#endif'
-        )
-        sysctl = sysctl[:match.start("mode")] + mode + sysctl[match.end("mode"):]
-        write(sysctl_path, sysctl)
-    elif not re.search(r'(?s)\.procname\s*=\s*"swappiness",.*?#ifdef CONFIG_RW_SWAPPINESS', sysctl):
-        fail("RW_SWAPPINESS: could not safely locate the vm.swappiness sysctl mode.")
-
-    common_config = source / "arch/arm64/configs/vendor/xiaomi/magictime-common.config"
-    set_config(common_config, "RW_SWAPPINESS", enabled)
-    print(f"RW_SWAPPINESS: {'enabled' if enabled else 'disabled'}")
-
-
 def function_body_replace(content: str, function: str, replacement_body: str) -> str:
     pattern = re.compile(
         rf"(?ms)^(?P<head>(?:static\s+)?[\w\s\*]+\b{re.escape(function)}\s*\([^;]*?\)\s*\{{)"
@@ -344,7 +302,6 @@ def main() -> None:
     parser.add_argument("--device", required=True)
     parser.add_argument("--battery-profile", choices=("j3s", "stk"), default="j3s")
     parser.add_argument("--bypass-charging", choices=("true", "false"), default="false")
-    parser.add_argument("--rw-swappiness", choices=("true", "false"), default="false")
     args = parser.parse_args()
 
     source = args.source_dir.resolve()
@@ -363,15 +320,12 @@ def main() -> None:
                        "BYPASS_CHARGING", False)
         print("BYPASS_CHARGING: disabled")
 
-    add_rw_swappiness(source, args.rw_swappiness)
-
     summary = Path(__import__("os").environ.get("GITHUB_STEP_SUMMARY", ""))
     if str(summary) and summary.is_file():
         with summary.open("a", encoding="utf-8") as stream:
             stream.write("### Darkdreamer feature integration\n")
             stream.write(f"- Battery profile: {args.battery_profile if args.device == 'alioth' else 'not applicable'}\n")
             stream.write(f"- Bypass charging: {args.bypass_charging}\n")
-            stream.write(f"- Writable swappiness: {args.rw_swappiness}\n")
 
 
 if __name__ == "__main__":
