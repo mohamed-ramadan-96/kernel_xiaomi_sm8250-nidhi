@@ -165,11 +165,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          python3 workflow-tools/scripts/apply_darkdreamer_features.py \\
-            --source-dir kernel-source \\
-            --device "${DEVICE}" \\
-            --battery-profile "${{ inputs.battery_profile }}" \\
-            --bypass-charging "${{ inputs.bypass_charging }}" \\
+          python3 workflow-tools/scripts/apply_darkdreamer_features.py \
+            --source-dir kernel-source \
+            --device "${DEVICE}" \
+            --battery-profile "${{ inputs.battery_profile }}" \
+            --bypass-charging "${{ inputs.bypass_charging }}" \
             --rw-swappiness "${{ inputs.rw_swappiness }}"
 
       - name: Pick the switches to turn off
