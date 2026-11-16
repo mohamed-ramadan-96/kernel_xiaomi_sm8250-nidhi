@@ -263,26 +263,29 @@ def select_battery_profile(source: Path, profile: str, device: str) -> None:
 
     dts_path = source / "arch/arm64/boot/dts/vendor/qcom/alioth-sm8250.dtsi"
     dts = read(dts_path)
-    j3s = re.compile(r"(?m)^\s*qcom,j3s-batt-profile;\s*\r?\n")
+    j3s = re.compile(r"(?m)^[ \t]*qcom,j3s-batt-profile;[ \t]*\r?\n")
     mah5000 = re.compile(
-        r'(?m)^\s*#include\s+"fg-gen4-batterydata-apollo-sun-5000mah\.dtsi"\s*\r?\n'
+        r'(?m)^[ \t]*#include[ \t]+"fg-gen4-batterydata-apollo-sun-5000mah\.dtsi"[ \t]*\r?\n'
     )
-    if len(j3s.findall(dts)) != 1:
-        fail("Battery profile: expected exactly one qcom,j3s-batt-profile property.")
-    if len(mah5000.findall(dts)) != 1:
-        fail("Battery profile: expected exactly one 5000mAh battery-data include.")
+    j3s_count = len(j3s.findall(dts))
+    mah5000_count = len(mah5000.findall(dts))
 
-    if profile == "stk":
-        dts = j3s.sub("", dts)
-        dts = mah5000.sub("", dts)
+    if profile == "j3s":
+        if j3s_count != 1 or mah5000_count != 1:
+            fail("Battery profile: j3s requires exactly one j3s selector and one 5000mAh data include.")
+    elif profile == "stk":
+        if (j3s_count, mah5000_count) == (1, 1):
+            dts = j3s.sub("", dts)
+            dts = mah5000.sub("", dts)
+        elif (j3s_count, mah5000_count) != (0, 0):
+            fail("Battery profile: partial/ambiguous j3s selection detected; refusing to guess.")
         if "fg-gen4-batterydata-alioth-FMT-4520mah.dtsi" not in dts or "fg-gen4-batterydata-alioth-GY-4520mah.dtsi" not in dts:
             fail("Battery profile: 4520mAh FMT/GY tables were not found after selecting stk.")
-    elif profile != "j3s":
+    else:
         fail(f"Unknown battery profile: {profile}")
 
     write(dts_path, dts)
     print(f"Battery profile: {profile} ({'5000mAh j3s' if profile == 'j3s' else '4520mAh stock'})")
-
 
 def main() -> None:
     parser = argparse.ArgumentParser()
