@@ -160,7 +160,7 @@ jobs:
       - name: Set up the build
         uses: ./workflow-tools/.github/actions/setup-build
         with:
-          cache-key: ${{ inputs.device }}-${{ steps.source.outputs.slug }}-${{ steps.source.outputs.sha }}
+          cache-key: ${{ inputs.device }}-${{ steps.source.outputs.slug }}
           source-dir: kernel-source
 
       - name: Pick the switches to turn off
